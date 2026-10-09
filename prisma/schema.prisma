@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique // stored lowercase; display name kept in `display`
+  display      String
+  passwordHash String
+  soloLevel    Int      @default(1)
+  createdAt    DateTime @default(now())
+
+  friends   Friendship[] @relation("owner")
+  friendOf  Friendship[] @relation("target")
+  hosted    Match[]      @relation("host")
+  guested   Match[]      @relation("guest")
+}
+
+model Friendship {
+  userId   String
+  friendId String
+  user     User   @relation("owner", fields: [userId], references: [id], onDelete: Cascade)
+  friend   User   @relation("target", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@id([userId, friendId])
+}
+
+enum MatchStatus {
+  PENDING
+  ACTIVE
+  DONE
+  DECLINED
+}
+
+model Match {
+  id        String      @id @default(cuid())
+  hostId    String
+  guestId   String
+  host      User        @relation("host", fields: [hostId], references: [id], onDelete: Cascade)
+  guest     User        @relation("guest", fields: [guestId], references: [id], onDelete: Cascade)
+  text      String
+  status    MatchStatus @default(PENDING)
+  winnerId  String?
+  hostPos   Int         @default(0)
+  guestPos  Int         @default(0)
+  createdAt DateTime    @default(now())
+  startedAt DateTime?
+}
